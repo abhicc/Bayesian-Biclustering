@@ -415,7 +415,7 @@ gamma_y=4;gamma_lambda1=2;gamma_lambda2=1
 
 R=4;C=4;alpha=10;beta=10   # defined in the paper (to be set by user)
 
-# initial row and cluster assignment vectors, lambda1 and lambda2
+# initial row and column cluster assignment vectors, lambda1 and lambda2
 id_row_0=sample(c(1:R),I,replace = TRUE,prob=rep(1/R,R))
 id_col_0=sample(c(1:C),J,replace = TRUE,prob=rep(1/C,C))
 train_row=cbind(train,idr=id_row_0);train_col=cbind(t(train),idc=id_col_0)
