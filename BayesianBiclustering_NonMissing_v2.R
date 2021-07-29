@@ -363,7 +363,7 @@ sigma=1;mu_prior=0;rho=10   # defined in the paper (to be set by user)
 
 R=4;C=4;alpha=10;beta=10   # defined in the paper (to be set by user)
 
-# initial row and cluster assignment vectors
+# initial row and column cluster assignment vectors
 id_row_0=sample(c(1:R),I,replace = TRUE,prob=rep(1/R,R))
 id_col_0=sample(c(1:C),J,replace = TRUE,prob=rep(1/C,C))
 train_row=cbind(train,idr=id_row_0);train_col=cbind(t(train),idc=id_col_0)
