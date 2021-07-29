@@ -262,7 +262,7 @@ sigma=3;mu_prior=0;rho=10   # defined in the paper (to be set by user)
 
 R=15;C=15;alpha=20;beta=20   # defined in the paper (to be set by user)
 
-# initial row and cluster assignment vectors, identical to the ones used with informative missingness assumption
+# initial row and column cluster assignment vectors, identical to the ones used with informative missingness assumption
 # id_row_0=sample(c(1:R),I,replace = TRUE,prob=rep(1/R,R))
 # id_col_0=sample(c(1:C),J,replace = TRUE,prob=rep(1/C,C))
 id_row_0=readRDS("idr0.rds");id_col_0=readRDS("idc0.rds")
