@@ -1,6 +1,6 @@
 #==========================================================================================
 #==========================================================================================
-# This is additional code for the simulation study on Multiplicative Biclusters setting (section 6.4)
+# This is additional code for the simulation study on multiplicative biclusters setting (section 6.4)
 #==========================================================================================
 #==========================================================================================
 
@@ -23,7 +23,7 @@ X = X-mean(X)
 saveRDS(X,"MultBiclust_X.rds")
 
 #==========================================================================================
-# Performing Bayesian biclustering (with real dataset MultBiclust_X.rds) using either the first 
+# Perform Bayesian biclustering (with real dataset MultBiclust_X.rds) using either the first 
 # or second version (see master codes) of the MCMC sampler. Save the results and plots obtained.
 # The following lines of code can be used to plot the means matrices.
 #==========================================================================================
@@ -46,7 +46,7 @@ g.mus = ggplot(plotmus, aes(x = Columns, y = Rows)) + geom_tile(aes(fill = Z)) +
   theme(plot.title = element_text(hjust = 0.5))
 g.mus + rremove("xy.text")
 
-# plot means matrix from Bayesian biclustering
+# plot means matrix estimated from Bayesian biclustering
 bbc.mus = matrix(NA,nrow=I,ncol=J)
 for(i in 1:I){
   for(j in 1:J){
@@ -67,7 +67,7 @@ g.bbc.mus = ggplot(plotbbc.mus, aes(x = Columns, y = Rows)) + geom_tile(aes(fill
   scale_fill_gradientn(colours = color, na.value = "white") +
   theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
   scale_y_discrete(limits = rev(levels(as.factor(plotbbc.mus$Rows)))) + 
-  ggtitle("Bayesian biclustering") + 
+  ggtitle("Estimated means matrix") + 
   theme(plot.title = element_text(hjust = 0.5))
 g.bbc.mus + rremove("xy.text") 
 
