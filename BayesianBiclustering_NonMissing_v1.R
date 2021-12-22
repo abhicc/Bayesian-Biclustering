@@ -432,10 +432,6 @@ diag(mr)=NA;diag(mc)=NA;diag(me)=NA
 avgRowRI=apply(mr,2,function(x) mean(x,na.rm = TRUE));avgColRI=apply(mc,2,function(x) mean(x,na.rm = TRUE))
 avgElementRI=apply(me,2,function(x) mean(x,na.rm = TRUE))
 
-sse_dat=data.frame(Iteration=c(1:(nreps+1)),SSE=sse_mat)
-
-lp_dat=data.frame(Iteration=c(1:(nreps+1)),log_posterior=lp)
-
 # following operation to be modified based on whether the dataset is simulated or real
 # see 'row_ri', 'column_ri', 'element_ri' functions
 RI=data.frame(Iteration=c(1:nreps), 
@@ -445,22 +441,42 @@ RI=data.frame(Iteration=c(1:nreps),
               ColumnRIsuccessive=colRI,
               # ElementRItrue=elementRI$ElementRItrue,
               ElementRIsuccessive=elementRI$ElementRIsucs)
-RI=melt(RI, id.vars = "Iteration")
+
+# summaries of numbers of non-empty row-column cluster combinations
+pq=data.frame(Iteration=c(1:nreps),
+              p=apply(id_row_mat[,-1],2,function(x) length(unique(x))),
+              q=apply(id_col_mat[-1,],1,function(x) length(unique(x))),
+              SSE=sse_mat[-1],
+              log_posterior=lp[-1]) %>%
+  mutate(pSSE = log10(SSE+1)+p*q)   # calculate penalized SSE
+
+pq_summary=ddply(pq,.(p,q),summarize,freq=length(SSE),
+                 meanSSE=mean(SSE),minSSE=min(SSE),maxSSE=max(SSE),
+                 mean_log_post=mean(log_posterior,na.rm = TRUE),
+                 min_log_post=min(log_posterior,na.rm = TRUE),
+                 max_log_post=max(log_posterior,na.rm = TRUE),
+                 mean_pSSE=mean(pSSE),min_pSSE=min(pSSE),max_pSSE=max(pSSE))
 
 #==========================================================================================
 # obtaining plots
 #==========================================================================================
 # total SSE plot
+sse_dat=data.frame(Iteration=c(1:(nreps+1)),SSE=sse_mat)
+
 g.sse = ggplot(data=sse_dat, aes(x=Iteration, y=SSE)) + geom_line(color="blue", size=1) + 
   ggtitle("SSE Plot") + theme(plot.title = element_text(hjust = 0.5))
 g.sse
 
 # log of joint posterior plot
+lp_dat=data.frame(Iteration=c(1:(nreps+1)),log_posterior=lp)
+
 g.lp = ggplot(data=lp_dat, aes(x=Iteration, y=log_posterior)) + geom_line(color="blue", size=1) +
   ggtitle("Log Posterior Plot") + theme(plot.title = element_text(hjust = 0.5))
 g.lp
 
 # plots of Rand indices
+RI=melt(RI, id.vars = "Iteration")
+
 g.ri = ggplot(data=RI, aes(x=Iteration, y=value, group=variable)) +
   geom_line(aes(color=variable), size=0.7) +
   geom_point(aes(color=variable), size=1) + facet_grid(variable~.) +
@@ -471,16 +487,25 @@ g.ri.hist = ggplot(data=RI, aes(x=value)) + geom_histogram() + facet_grid(variab
   theme_bw() + ggtitle("Histograms of Rand Indices") + theme(plot.title = element_text(hjust = 0.5))
 g.ri.hist
 
+# plot of numbers of non-empty row-column cluster combinations
+pq_plot=melt(select(pq,c("Iteration","p","q")), id.vars = "Iteration")
+
+g.pq = ggplot(data=pq_plot, aes(x=Iteration, y=value, group=variable)) +
+  geom_line(aes(color=variable), size=0.7) +
+  geom_point(aes(color=variable), size=1) + facet_grid(variable~.) +
+  ggtitle("p-q Plot") + theme(plot.title = element_text(hjust = 0.5))
+g.pq
+
 #==========================================================================================
-# plot biclusters, biclusters determined by 3 criteria
+# plot biclusters, biclusters determined by 4 criteria
 
 # minimum total SSE 
-train_clust_1=train[order(id_row_mat[,which.min(sse_mat)]),order(id_col_mat[which.min(sse_mat),])]
+train_clust_1=train[order(id_row_mat[,which.min(sse_mat[-1])]),order(id_col_mat[which.min(sse_mat[-1]),])]
 train_clust_plot_1=expand.grid(Rows=rownames(data.frame(train_clust_1)), Columns=colnames(data.frame(train_clust_1)))
 val=as.vector(train_clust_1)
 train_clust_plot_1$Z=val
-v=cumsum(as.vector(table(id_col_mat[which.min(sse_mat),])))+0.5;vline_coords=data.frame(v=v[-length(v)])
-h=cumsum(as.vector(table(id_row_mat[,which.min(sse_mat)])))+0.5;hline_coords=data.frame(h=h[-length(h)])
+v=cumsum(as.vector(table(id_col_mat[which.min(sse_mat[-1]),])))+0.5;vline_coords=data.frame(v=v[-length(v)])
+h=cumsum(as.vector(table(id_row_mat[,which.min(sse_mat[-1])])))+0.5;hline_coords=data.frame(h=h[-length(h)])
 clust_plot_1=list(data=train_clust_plot_1,vlines=vline_coords,hlines=hline_coords)
 
 g.1 = ggplot(data=clust_plot_1$data, aes(x=Columns, y=Rows)) + geom_tile(aes(fill= Z)) +
@@ -534,49 +559,33 @@ g.3 = ggplot(data=clust_plot_3$data, aes(x=Columns, y=Rows)) + geom_tile(aes(fil
 # + xlab("...") + ylab("...")
 g.3
 
-#==========================================================================================
-# compare Rand indices for partitions based on the 3 criteria 
-# (to used only when "true" clusterings 'tCs','tDs',and 'tEs' are known)
-#==========================================================================================
-# # for rows
-# RRand(id_row_mat[,which.min(sse_mat)],tCs);RRand(id_row_mat[,which.max(avgRowRI)],tCs)
-# RRand(id_row_mat[,which.max(lp[-1])+1],tCs)
-# 
-# # for columns
-# RRand(id_col_mat[which.min(sse_mat),],tDs);RRand(id_col_mat[which.max(avgColRI),],tDs)
-# RRand(id_col_mat[which.max(lp[-1])+1,],tDs)
-# 
-# # for elements
-# RRand(tEs,elementRI$id_element_mat[,which.min(sse_mat)]);RRand(tEs,elementRI$id_element_mat[,which.max(avgElementRI)])
-# RRand(tEs,elementRI$id_element_mat[,which.max(lp[-1])+1])
+# minimum penalized SSE 
+train_clust_4=train[order(id_row_mat[,which.min(pq$pSSE)+1]),order(id_col_mat[which.min(pq$pSSE)+1,])]
+train_clust_plot_4=expand.grid(Rows=rownames(data.frame(train_clust_4)), Columns=colnames(data.frame(train_clust_4)))
+val=as.vector(train_clust_4)
+train_clust_plot_4$Z=val
+v=cumsum(as.vector(table(id_col_mat[which.min(pq$pSSE)+1,])))+0.5;vline_coords_4=data.frame(v=v[-length(v)])
+h=cumsum(as.vector(table(id_row_mat[,which.min(pq$pSSE)+1])))+0.5;hline_coords_4=data.frame(h=h[-length(h)])
+clust_plot_4=list(data=train_clust_plot_4,vlines=vline_coords_4,hlines=hline_coords_4)
+
+g.4 = ggplot(data=clust_plot_4$data, aes(x=Columns, y=Rows)) + geom_tile(aes(fill= Z)) +
+  geom_vline(data=clust_plot_4$vlines,aes(xintercept = v)) +
+  geom_hline(data=clust_plot_4$hlines,aes(yintercept = h)) +
+  theme_bw() +
+  scale_fill_gradientn(colours = color, na.value = "white") +
+  scale_y_discrete(limits = rev(levels(as.factor(train_clust_plot_4$Rows)))) +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1)) + ggtitle("Biclusters identified for min penalized SSE") + 
+  theme(plot.title = element_text(hjust = 0.5)) + rremove("xy.text") + rremove("xylab")
+# + xlab("...") + ylab("...")
+g.4
 
 #==========================================================================================
-# obtain summary and plot of numbers of non-empty row-column cluster combinations
-#==========================================================================================
-pq=data.frame(Iteration=c(1:nreps),p=apply(id_row_mat[,-1],2,function(x) length(unique(x))),
-              q=apply(id_col_mat[-1,],1,function(x) length(unique(x))),
-              SSE=sse_mat[-1],log_posterior=lp[-1])
-pq_summary=ddply(pq,.(p,q),summarize,freq=length(SSE),meanSSE=mean(SSE),minSSE=min(SSE),maxSSE=max(SSE),
-                 mean_log_post=mean(log_posterior,na.rm = TRUE),min_log_post=min(log_posterior,na.rm = TRUE),
-                 max_log_post=max(log_posterior,na.rm = TRUE))
-
-pq_plot=melt(select(pq,c("Iteration","p","q")), id.vars = "Iteration")
-
-g.pq = ggplot(data=pq_plot, aes(x=Iteration, y=value, group=variable)) +
-  geom_line(aes(color=variable), size=0.7) +
-  geom_point(aes(color=variable), size=1) + facet_grid(variable~.) +
-  ggtitle("p-q Plot") + theme(plot.title = element_text(hjust = 0.5))
-g.pq
-
-#==========================================================================================
-# obtain row and column cluster frequency plots 
-#==========================================================================================
+# row cluster frequency plot
 rcf[lower.tri(rcf)]=t(rcf)[lower.tri(rcf)]
-ccf[lower.tri(ccf)]=t(ccf)[lower.tri(ccf)]
-
 rcfdat <- expand.grid(Rows = rownames(rcf), Columns = colnames(rcf))
 vec = as.vector(as.matrix(rcf))
 rcfdat$Z <- vec
+
 g.rcf = ggplot(data = rcfdat, aes(Rows, Columns, fill = Z))+
   geom_tile(color = "white")+
   scale_fill_gradient2(low = "blue", high = "red", limit = c(0,1)) +
@@ -588,9 +597,12 @@ g.rcf = ggplot(data = rcfdat, aes(Rows, Columns, fill = Z))+
   theme(plot.title = element_text(hjust = 0.5)) + rremove("xylab")
 g.rcf
 
+# column cluster frequency plot
+ccf[lower.tri(ccf)]=t(ccf)[lower.tri(ccf)]
 ccfdat <- expand.grid(Rows = rownames(ccf), Columns = colnames(ccf))
 vec = as.vector(as.matrix(ccf))
 ccfdat$Z <- vec
+
 g.ccf = ggplot(data = ccfdat, aes(Rows, Columns, fill = Z))+
   geom_tile(color = "white")+
   scale_fill_gradient2(low = "blue", high = "red", limit = c(0,1)) +
@@ -601,6 +613,22 @@ g.ccf = ggplot(data = ccfdat, aes(Rows, Columns, fill = Z))+
   xlab("Columns") + ylab("Columns") + ggtitle("Column Cluster Frequency") + 
   theme(plot.title = element_text(hjust = 0.5)) + rremove("xylab")
 g.ccf
+
+#==========================================================================================
+# compare Rand indices for partitions based on the 3 criteria 
+# (to used only when "true" clusterings 'tCs','tDs',and 'tEs' are known)
+#==========================================================================================
+# # for rows
+# RRand(id_row_mat[,which.min(sse_mat[-1])],tCs);RRand(id_row_mat[,which.max(avgRowRI)],tCs)
+# RRand(id_row_mat[,which.max(lp[-1])+1],tCs); RRand(id_row_mat[,which.min(pq$pSSE)+1],tCs)
+# 
+# # for columns
+# RRand(id_col_mat[which.min(sse_mat[-1]),],tDs);RRand(id_col_mat[which.max(avgColRI),],tDs)
+# RRand(id_col_mat[which.max(lp[-1])+1,],tDs); RRand(id_col_mat[which.min(pq$pSSE)+1,],tDs)
+# 
+# # for elements
+# RRand(tEs,elementRI$id_element_mat[,which.min(sse_mat[-1])]);RRand(tEs,elementRI$id_element_mat[,which.max(avgElementRI)])
+# RRand(tEs,elementRI$id_element_mat[,which.max(lp[-1])+1]); RRand(tEs,elementRI$id_element_mat[,which.min(pq$pSSE)+1]) 
 
 #==========================================================================================
 save.image(file="BayesianBiclustering_NonMissing_v1.RData")
