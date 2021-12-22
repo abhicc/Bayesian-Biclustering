@@ -11,6 +11,8 @@ Supplementary material for the paper 'Some Bayesian Biclustering Methods: Modeli
 - **SimStudies_X.rds** - dataset for simulation studies 6.1.3, 6.2, and 6.3
 - **MultBiclust.R** - additional code for simulation study 6.4
 - **MultBiclust_X.rds** - dataset for simulation study 6.4
+- **OverlapMultBiclust.R** - additional code for simulation study 6.5
+- **OverlapMultBiclust_X.rds** - dataset for simulation study 6.5
 - **LungCancer.rds** - lung cancer gene expression dataset
 - **trueColumnCluster.rds** - "true" column clustering for lung cancer gene expression dataset
 - **AgYield.rds** - agricultural yield dataset
